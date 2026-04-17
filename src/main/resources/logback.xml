@@ -5,11 +5,12 @@
         </encoder>
     </appender>
 
-    <logger name="akka.actor" level="INFO" />
-    <logger name="akka.event" level="INFO" />
-    <logger name="com.uic.cs553" level="INFO" />
+    <!-- Change to DEBUG to see every actor message in detail -->
+    <logger name="edu.uic.cs553" level="INFO" />
+    <logger name="akka.actor"    level="INFO" />
+    <logger name="akka"          level="WARN" />
 
-    <root level="INFO">
+    <root level="WARN">
         <appender-ref ref="STDOUT" />
     </root>
 </configuration>

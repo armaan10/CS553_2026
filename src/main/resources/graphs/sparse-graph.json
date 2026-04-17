@@ -1,0 +1,22 @@
+{
+  "nodes": [
+    {"id": 1, "storedValue": 0.10},
+    {"id": 2, "storedValue": 0.20},
+    {"id": 3, "storedValue": 0.30},
+    {"id": 4, "storedValue": 0.40},
+    {"id": 5, "storedValue": 0.50},
+    {"id": 6, "storedValue": 0.60},
+    {"id": 7, "storedValue": 0.70},
+    {"id": 8, "storedValue": 0.80}
+  ],
+  "edges": [
+    {"fromId": 1, "toId": 2, "cost": 1.0},
+    {"fromId": 2, "toId": 3, "cost": 1.0},
+    {"fromId": 3, "toId": 4, "cost": 1.0},
+    {"fromId": 4, "toId": 5, "cost": 1.0},
+    {"fromId": 5, "toId": 6, "cost": 1.0},
+    {"fromId": 6, "toId": 7, "cost": 1.0},
+    {"fromId": 7, "toId": 8, "cost": 1.0},
+    {"fromId": 8, "toId": 1, "cost": 1.0}
+  ]
+}

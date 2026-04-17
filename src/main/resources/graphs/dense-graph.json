@@ -1,0 +1,38 @@
+{
+  "nodes": [
+    {"id": 1, "storedValue": 0.15},
+    {"id": 2, "storedValue": 0.35},
+    {"id": 3, "storedValue": 0.55},
+    {"id": 4, "storedValue": 0.75},
+    {"id": 5, "storedValue": 0.95},
+    {"id": 6, "storedValue": 0.25},
+    {"id": 7, "storedValue": 0.45},
+    {"id": 8, "storedValue": 0.65}
+  ],
+  "edges": [
+    {"fromId": 1, "toId": 2, "cost": 1.0},
+    {"fromId": 2, "toId": 3, "cost": 1.0},
+    {"fromId": 3, "toId": 4, "cost": 1.0},
+    {"fromId": 4, "toId": 5, "cost": 1.0},
+    {"fromId": 5, "toId": 6, "cost": 1.0},
+    {"fromId": 6, "toId": 7, "cost": 1.0},
+    {"fromId": 7, "toId": 8, "cost": 1.0},
+    {"fromId": 8, "toId": 1, "cost": 1.0},
+    {"fromId": 1, "toId": 3, "cost": 1.5},
+    {"fromId": 1, "toId": 5, "cost": 1.5},
+    {"fromId": 2, "toId": 4, "cost": 1.5},
+    {"fromId": 2, "toId": 6, "cost": 1.5},
+    {"fromId": 3, "toId": 5, "cost": 1.5},
+    {"fromId": 3, "toId": 7, "cost": 1.5},
+    {"fromId": 4, "toId": 6, "cost": 1.5},
+    {"fromId": 4, "toId": 8, "cost": 1.5},
+    {"fromId": 5, "toId": 7, "cost": 1.5},
+    {"fromId": 5, "toId": 1, "cost": 1.5},
+    {"fromId": 6, "toId": 8, "cost": 1.5},
+    {"fromId": 6, "toId": 2, "cost": 1.5},
+    {"fromId": 7, "toId": 1, "cost": 1.5},
+    {"fromId": 7, "toId": 3, "cost": 1.5},
+    {"fromId": 8, "toId": 2, "cost": 1.5},
+    {"fromId": 8, "toId": 4, "cost": 1.5}
+  ]
+}
