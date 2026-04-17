@@ -57,9 +57,6 @@ class SimCoordinator(graph: SimGraph, algoFactory: Int => Option[DistributedAlgo
     )
   }
 
-  private val metricsCollector: ActorRef =
-    context.actorOf(MetricsCollector.props(nodeRefs.size), "metrics")
-
   private val rng = new scala.util.Random(graph.seed)
 
   override def receive: Receive =
@@ -71,6 +68,9 @@ class SimCoordinator(graph: SimGraph, algoFactory: Int => Option[DistributedAlgo
     case Stop =>
       log.info("SimCoordinator: stopping all nodes and collecting metrics")
       nodeRefs.values.foreach(_ ! Stop)
+      // Create MetricsCollector here so its 5s fallback timeout starts now,
+      // not at coordinator construction time (which would fire before Stop).
+      val metricsCollector = context.actorOf(MetricsCollector.props(nodeRefs.size), "metrics")
       // GetMetrics is queued after Stop in each node's mailbox — ordering guaranteed
       nodeRefs.values.foreach(_ ! GetMetrics(metricsCollector))
 
