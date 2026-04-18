@@ -64,6 +64,14 @@ sbt "runMain edu.uic.cs553.cli.SimMain --algo none --duration 20"
 ### Step 4 — Run a pre-built experiment
 
 ```bash
+
+# Experiment 6 — NetGameSim graph with per-edge labels + per-node PDFs, election
+# Sample graph in outputs/
+sbt "runMain edu.uic.cs553.cli.SimMain \
+     --ngs outputs/NetGraph_18-04-26-05-03-31.ngs \
+     --config experiments/experiment6 \
+     --algo election --duration 25"
+     
 # Experiment 1 — sparse ring (8 nodes), leader election
 sbt "runMain edu.uic.cs553.cli.SimMain \
      --config experiments/experiment1 \
@@ -81,12 +89,7 @@ sbt "runMain edu.uic.cs553.cli.SimMain \
      --graph src/main/resources/graphs/dense-graph.json \
      --algo none --duration 20"
 
-# Experiment 6 — NetGameSim graph with per-edge labels + per-node PDFs, election
-# First generate a graph: cd netgamesim && sbt run && cd ..
-sbt "runMain edu.uic.cs553.cli.SimMain \
-     --ngs outputs/<your-generated>.ngs \
-     --config experiments/experiment6 \
-     --algo election --duration 25"
+
 ```
 
 ---
