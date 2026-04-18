@@ -1,7 +1,8 @@
 # CS553_2026 — Distributed Algorithms Simulator
 Student: Armaan Ashfaque
-Course: CS 553
+
 UIN: 678073041
+
 End-to-end distributed algorithms simulator built with **Scala 3.3.3** and **Akka Classic actors**.  Randomly generated graphs from NetGameSim become running Akka actor networks where each node is an actor and each edge is a typed message channel.  Two distributed algorithms run on top: **Itai-Rodeh leader election** and **Itai-Rodeh ring size estimation**.
 
 ## Prerequisites
@@ -15,6 +16,7 @@ End-to-end distributed algorithms simulator built with **Scala 3.3.3** and **Akk
 ---
 ### Demo Video:
 https://drive.google.com/file/d/1sx43qvF07a8VHYucqh0OthhP8ME8-Z9h/view?usp=sharing
+
 Youtube link:
 https://youtu.be/yMT_C_rQVFE
 ## How to Run
@@ -22,7 +24,7 @@ https://youtu.be/yMT_C_rQVFE
 ### Step 1 — Clone and build
 
 ```bash
-git clone <repo-url>
+git clone --recurse-submodules <repo-url>
 cd CS553_2026
 sbt compile
 ```
@@ -80,8 +82,9 @@ sbt "runMain edu.uic.cs553.cli.SimMain \
      --algo none --duration 20"
 
 # Experiment 6 — NetGameSim graph with per-edge labels + per-node PDFs, election
+# First generate a graph: cd netgamesim && sbt run && cd ..
 sbt "runMain edu.uic.cs553.cli.SimMain \
-     --ngs outputs/NetGraph_18-04-26-04-19-27.ngs \
+     --ngs outputs/<your-generated>.ngs \
      --config experiments/experiment6 \
      --algo election --duration 25"
 ```
@@ -169,7 +172,7 @@ src/main/scala/edu/uic/cs553/
 src/main/resources/
 ├── application.conf
 ├── logback.xml
-├── graphs/          sample-graph.json, sparse-graph.json, dense-graph.json, large-10k-graph.json
+├── graphs/          sample-graph.json, sparse-graph.json, dense-graph.json
 └── experiments/     experiment1.conf, experiment2.conf, experiment3.conf, experiment6.conf
 
 src/test/scala/edu/uic/cs553/

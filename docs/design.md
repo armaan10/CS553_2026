@@ -28,8 +28,8 @@ NetGameSim generates random directed graphs and serialises them to disk.  To use
    NGSimulator.OutputGraphRepresentation.contentType = "json"
    ```
 2. Run: `cd netgamesim && sbt run`
-3. The file `outputs/NetGraph_<timestamp>.ngs.json` is created.
-4. Load it: `sbt "runMain edu.uic.cs553.cli.SimMain --ngs outputs/NetGraph_<timestamp>.ngs.json"`
+3. The file `outputs/NetGraph_<timestamp>.ngs` is created.
+4. Load it: `sbt "runMain edu.uic.cs553.cli.SimMain --ngs outputs/NetGraph_<timestamp>.ngs"`
 
 `GraphLoader.loadNetGameSimJson` parses the two-line format (line 1: nodes, line 2: edges) using custom circe decoders that tolerate extra fields, so the full NetGameSim schema is not required.
 
@@ -53,7 +53,7 @@ Sampling uses the inverse-CDF method in `NodeActor.sampleFromPdf()`.
 
 ### 2.4 Ring Overlay
 
-Both algorithms require a ring structure.  `SimGraph.ringNextOf` builds a logical ring by sorting all node IDs numerically and mapping each to its successor (wrapping around).  This overlay is independent of the actual edge set — ring algorithm messages travel over the logical ring via the `CONTROL` channel, which is always permitted.
+Both algorithms require a ring structure.  `SimGraph.ringNextOf` builds a logical ring by sorting all node IDs numerically and mapping each to its successor (wrapping around).  This overlay is fully independent of the physical edge set — `SimCoordinator` resolves each node's ring successor to an `ActorRef` (`ringSuccessorRef`) at `Init` time and passes it directly to the `NodeActor`.  `sendToNeighbour` falls back to this ref when the ring successor is not a direct graph neighbour, so algorithm messages always reach the next ring node regardless of graph topology.
 
 ## 3. Actor Architecture
 
@@ -63,10 +63,11 @@ Both algorithms require a ring structure.  `SimGraph.ringNextOf` builds a logica
 
 | Field | Purpose |
 |---|---|
-| `neighbors` | ActorRef map keyed by node id |
+| `neighbors` | ActorRef map keyed by node id (graph edges only) |
 | `allowedOnEdge` | Per-neighbour set of permitted message types |
 | `pdf` | PMF for background traffic generation |
 | `rightNeighborId` | Ring successor id (ring algorithms) |
+| `ringSuccessorRef` | ActorRef of ring successor — independent of graph edges |
 | `ringSize` | Total nodes in ring (ring algorithms) |
 | `algorithm` | Optional `DistributedAlgorithm` plug-in |
 
@@ -218,8 +219,7 @@ SimMessage (sealed trait)
 | experiment1 | sparse (8 nodes, ring only) | election | Pure-ring correctness; low background noise |
 | experiment2 | sample (12 nodes, ring+cross) | ring-size | Algorithm isolation from cross-edge traffic |
 | experiment3 | dense (8 nodes, high connectivity) | none | Max-throughput traffic; edge-label enforcement effect |
-| experiment4 | large-10k (10,000 nodes) | election | Algorithm scalability under large ring |
-| experiment5 | sparse (8 nodes) | none | Per-edge labels + per-node PDFs; channel heterogeneity |
+| experiment6 | NetGameSim NGs (11 nodes) | election | Per-edge labels + per-node PDFs on a real generated graph |
 
 ## 8. Metrics
 
@@ -238,7 +238,10 @@ Logging uses SLF4J → Logback via the `akka-slf4j` bridge.  Key levels:
 | `edu.uic.cs553` | INFO | Algorithm events, node init/stop, metrics summary |
 | `akka` | WARN | Akka system warnings only |
 
-To see per-message traffic (send/receive on every edge), change `edu.uic.cs553` to `DEBUG` in `src/main/resources/logback.xml`.
+To see per-message traffic (send/receive on every edge), **both** of the following must be set to DEBUG:
+
+1. `akka.loglevel` in `src/main/resources/application.conf` — Akka filters log events before they reach SLF4J, so logback alone is not enough.
+2. The `edu.uic.cs553` logger level in `src/main/resources/logback.xml`.
 
 ## 10. Reproducibility
 
