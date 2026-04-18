@@ -24,11 +24,12 @@ sbt "runMain edu.uic.cs553.cli.SimMain \
 | Leader elected | Node-7 (id=595) |
 | Hops to complete ring | 8 (= ring size, round 1) |
 | Election rounds needed | 1 |
-| Total messages | 66 |
-| Message breakdown | CONTROL=66 |
+| Total messages | 90 |
+| CONTROL | 61 (68%) |
+| PING | 29 (32%) |
 | Duration | 25s |
 
-**Observation:** On a pure ring with low background noise, the algorithm converges in exactly one round. The winning candidate ID (595) travels all 8 hops without being dominated, confirming correctness. All 66 messages are CONTROL-typed (election + leader announcement), with zero application traffic interfering.
+**Observation:** On a pure ring with low background noise, the algorithm converges in exactly one round. The winning candidate ID (595) travels all 8 hops without being dominated, confirming correctness. CONTROL messages carry the election traffic; PING comes from timer nodes 1 and 5 generating low-rate background traffic on the ring edges (edge default allows PING+GOSSIP; GOSSIP is sampled but is < 500ms tick with low probability in this run). The algorithm is unaffected by concurrent application traffic.
 
 ---
 
@@ -140,7 +141,7 @@ sbt "runMain edu.uic.cs553.cli.SimMain \
 
 | Experiment | Graph | Nodes | Edges | Algorithm | Total Msgs | Duration |
 |---|---|---|---|---|---|---|
-| 1 | sparse ring | 8 | 8 | election | 66 | 25s |
+| 1 | sparse ring | 8 | 8 | election | 90 | 25s |
 | 2 | sample ring+cross | 12 | 18 | ring-size | 244 | 15s |
 | 3 | dense | 8 | 24 | none (traffic) | 1,194 | 20s |
 | 6 | NetGameSim NGs | 11 | 10 | election | 284 | 25s |
