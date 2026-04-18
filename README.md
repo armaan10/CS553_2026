@@ -1,6 +1,8 @@
 # CS553_2026 — Distributed Algorithms Simulator
-
-End-to-end distributed algorithms simulator built with **Scala 3.3.3** and **Akka Classic actors**.  Randomly generated graphs from NetGameSim become running Akka actor networks where each node is an actor and each edge is a typed message channel.  Two distributed algorithms from Fokkink's textbook run on top: **Itai-Rodeh leader election** and **Itai-Rodeh ring size estimation**.
+Student: Armaan Ashfaque
+Course: CS 553
+UIN: 678073041
+End-to-end distributed algorithms simulator built with **Scala 3.3.3** and **Akka Classic actors**.  Randomly generated graphs from NetGameSim become running Akka actor networks where each node is an actor and each edge is a typed message channel.  Two distributed algorithms run on top: **Itai-Rodeh leader election** and **Itai-Rodeh ring size estimation**.
 
 ## Prerequisites
 
@@ -58,7 +60,7 @@ sbt "runMain edu.uic.cs553.cli.SimMain --algo none --duration 20"
 ### Step 4 — Run a pre-built experiment
 
 ```bash
-# Experiment 1 — pure ring (8 nodes), leader election
+# Experiment 1 — sparse ring (8 nodes), leader election
 sbt "runMain edu.uic.cs553.cli.SimMain \
      --config experiments/experiment1 \
      --graph src/main/resources/graphs/sparse-graph.json \
@@ -75,17 +77,11 @@ sbt "runMain edu.uic.cs553.cli.SimMain \
      --graph src/main/resources/graphs/dense-graph.json \
      --algo none --duration 20"
 
-# Experiment 4 — 10,000-node graph, election at scale
+# Experiment 6 — NetGameSim graph with per-edge labels + per-node PDFs, election
 sbt "runMain edu.uic.cs553.cli.SimMain \
-     --config experiments/experiment4 \
-     --graph src/main/resources/graphs/large-10k-graph.json \
-     --algo election --duration 60"
-
-# Experiment 5 — per-edge labels + per-node PDFs demo
-sbt "runMain edu.uic.cs553.cli.SimMain \
-     --config experiments/experiment5 \
-     --graph src/main/resources/graphs/sparse-graph.json \
-     --algo none --duration 30"
+     --ngs outputs/NetGraph_18-04-26-04-19-27.ngs \
+     --config experiments/experiment6 \
+     --algo election --duration 25"
 ```
 
 ---
@@ -112,12 +108,12 @@ cd netgamesim
 sbt run
 cd ..
 ```
-This creates `outputs/NetGraph_<timestamp>.ngs.json`.
+This creates `outputs/NetGraph_<timestamp>.ngs`.
 
 **Step 3** — Run the simulator with the generated graph:
 ```bash
 sbt "runMain edu.uic.cs553.cli.SimMain \
-     --ngs outputs/NetGraph_<timestamp>.ngs.json \
+     --ngs outputs/NetGraph_<timestamp>.ngs \
      --algo election --duration 30"
 ```
 
@@ -139,12 +135,23 @@ sbt "runMain edu.uic.cs553.cli.SimMain \
 
 ## Increasing Log Verbosity
 
-By default only algorithm events (election rounds, ring-size convergence, leader declaration) are printed.  To also see every individual message sent and received on each channel, edit `src/main/resources/logback.xml`:
+By default only algorithm events (election rounds, ring-size convergence, leader declaration) are printed.
+To also see every individual message sent and received on each channel, set both the Akka level and the logback level to DEBUG.
 
+**Step 1** — `src/main/resources/application.conf`:
+```hocon
+akka {
+  loglevel = "DEBUG"   # change from INFO
+  ...
+}
+```
+
+**Step 2** — `src/main/resources/logback.xml`:
 ```xml
-<!-- change INFO to DEBUG -->
 <logger name="edu.uic.cs553" level="DEBUG" additivity="false">
 ```
+
+Both must be set — Akka filters messages before they reach logback, so setting only logback has no effect.
 
 ---
 
@@ -161,7 +168,7 @@ src/main/resources/
 ├── application.conf
 ├── logback.xml
 ├── graphs/          sample-graph.json, sparse-graph.json, dense-graph.json, large-10k-graph.json
-└── experiments/     experiment1.conf – experiment5.conf
+└── experiments/     experiment1.conf, experiment2.conf, experiment3.conf, experiment6.conf
 
 src/test/scala/edu/uic/cs553/
 ├── graph/           GraphLoaderSpec.scala
