@@ -68,7 +68,7 @@ object SimMain:
       case Left(err) =>
         log.error(s"Failed to load graph: $err")
         sys.exit(1)
-
+  
     // Max rounds for ring-size: CLI flag > config > default (3)
     val maxRounds = roundsOpt.getOrElse(
       if cfg.hasPath("sim.algorithms.ringSizeMaxRounds")

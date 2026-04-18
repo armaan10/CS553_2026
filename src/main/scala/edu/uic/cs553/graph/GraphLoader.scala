@@ -32,7 +32,7 @@ object GraphLoader:
 
   // Minimal projections — we only need these fields from the full NetGameSim JSON
   case class RawNode(id: Int, storedValue: Double)
-  case class RawEdge(fromId: Int, toId: Int, cost: Double)
+  case class RawEdge(fromId: Int, toId: Int, cost: Double, allowedTypes: Option[List[String]] = None)
 
   // Custom decoders tolerate extra fields (NetGameSim objects carry many more)
   private given Decoder[RawNode] = Decoder.instance { c =>
@@ -42,10 +42,22 @@ object GraphLoader:
     yield RawNode(id, sv)
   }
 
+  // Decoder for simple JSON format: fromId/toId are node IDs directly
   private given Decoder[RawEdge] = Decoder.instance { c =>
     for
-      from <- c.downField("fromId").as[Int]
-      to   <- c.downField("toId").as[Int]
+      from    <- c.downField("fromId").as[Int]
+      to      <- c.downField("toId").as[Int]
+      cost    <- c.downField("cost").as[Double].orElse(Right(1.0))
+      allowed <- c.downField("allowedTypes").as[Option[List[String]]].orElse(Right(None))
+    yield RawEdge(from, to, cost, allowed)
+  }
+
+  // NGs action objects store node IDs in fromNode.id/toNode.id;
+  // the top-level fromId/toId are internal action IDs, not node IDs
+  private val ngsEdgeDecoder: Decoder[RawEdge] = Decoder.instance { c =>
+    for
+      from <- c.downField("fromNode").downField("id").as[Int]
+      to   <- c.downField("toNode").downField("id").as[Int]
       cost <- c.downField("cost").as[Double].orElse(Right(1.0))
     yield RawEdge(from, to, cost)
   }
@@ -62,7 +74,8 @@ object GraphLoader:
       else
         for
           nodes <- decode[List[RawNode]](lines.head).left.map(e => s"Node parse error: ${e.getMessage}")
-          edges <- decode[List[RawEdge]](lines(1)).left.map(e => s"Edge parse error: ${e.getMessage}")
+          edges <- decode[List[RawEdge]](lines(1))(using Decoder.decodeList(ngsEdgeDecoder))
+                     .left.map(e => s"Edge parse error: ${e.getMessage}")
         yield (nodes, edges)
     }.fold(ex => Left(ex.getMessage), identity)
 
@@ -111,13 +124,14 @@ object GraphLoader:
     cfg:      Config,
     seed:     Long
   ): SimGraph =
-    val msgTypes      = safeGetStringList(cfg, "sim.messages.types")
-    val defaultAllowed = (safeGetStringList(cfg, "sim.edgeLabeling.default").toSet + "CONTROL")
-    val defaultPdf    = buildDefaultPdf(cfg, msgTypes)
-    val timerNodes    = safeGetIntList(cfg, "sim.initiators.timers").toSet
-    val inputNodes    = safeGetIntList(cfg, "sim.initiators.inputs").toSet
-    val tickMs        = Try(cfg.getLong("sim.traffic.tickIntervalMs")).getOrElse(500L)
-    val perNodePdf    = buildPerNodePdf(cfg, msgTypes)
+    val msgTypes       = safeGetStringList(cfg, "sim.messages.types")
+    val defaultAllowed = safeGetStringList(cfg, "sim.edgeLabeling.default").toSet + "CONTROL"
+    val perEdgeAllowed = buildPerEdgeAllowed(cfg)
+    val defaultPdf     = buildDefaultPdf(cfg, msgTypes)
+    val timerNodes     = safeGetIntList(cfg, "sim.initiators.timers").toSet
+    val inputNodes     = safeGetIntList(cfg, "sim.initiators.inputs").toSet
+    val tickMs         = Try(cfg.getLong("sim.traffic.tickIntervalMs")).getOrElse(500L)
+    val perNodePdf     = buildPerNodePdf(cfg, msgTypes)
 
     val nodes = rawNodes.map { rn =>
       val nodePdf = perNodePdf.getOrElse(rn.id, defaultPdf)
@@ -132,7 +146,13 @@ object GraphLoader:
     }
 
     val edges = rawEdges.map { re =>
-      SimEdge(fromId = re.fromId, toId = re.toId, cost = re.cost, allowedTypes = defaultAllowed)
+      // Priority: config perEdge > JSON allowedTypes > config default
+      // CONTROL is always added so algorithm messages can traverse any channel
+      val allowed = perEdgeAllowed.get((re.fromId, re.toId))
+        .orElse(re.allowedTypes.map(_.toSet))
+        .getOrElse(defaultAllowed - "CONTROL")
+        .+("CONTROL")
+      SimEdge(fromId = re.fromId, toId = re.toId, cost = re.cost, allowedTypes = allowed)
     }
 
     log.info(s"Graph enriched: ${nodes.size} nodes, ${edges.size} edges, seed=$seed")
@@ -170,6 +190,16 @@ object GraphLoader:
           p.getString("msg") -> p.getDouble("p")
         }
         nodeId -> validatePdf(entries.toMap, s"perNodePdf node $nodeId")
+      }.toMap
+    }.getOrElse(Map.empty)
+
+  private def buildPerEdgeAllowed(cfg: Config): Map[(Int, Int), Set[String]] =
+    Try {
+      cfg.getConfigList("sim.edgeLabeling.perEdge").asScala.toList.map { c =>
+        val from  = c.getInt("fromId")
+        val to    = c.getInt("toId")
+        val types = c.getStringList("allowedTypes").asScala.toSet
+        (from, to) -> types
       }.toMap
     }.getOrElse(Map.empty)
 

@@ -35,15 +35,25 @@ NetGameSim generates random directed graphs and serialises them to disk.  To use
 
 ### 2.2 Edge Labels
 
-Every directed edge receives a set of **allowed message types** derived from `sim.edgeLabeling.default` in the config.  `CONTROL` is always appended automatically so algorithm control messages (AlgoMessage) can traverse any channel.
+Every directed edge receives a set of **allowed message types** using the following priority order:
 
-Enforcement is in `NodeActor.sendToEligibleNeighbour` and `NodeActor.receive` for ExternalInput: a message is only forwarded to a neighbour whose edge entry contains its type.
+1. **Config per-edge override** (`sim.edgeLabeling.perEdge`) — highest priority; lets experiments impose constraints on NetGameSim graphs without editing the JSON file.
+2. **JSON `allowedTypes` field** — present in bundled sample graphs.
+3. **Config default** (`sim.edgeLabeling.default`) — fallback for unlisted edges.
+
+`CONTROL` is always appended automatically so algorithm messages (`AlgoMessage`) can traverse any channel regardless of label.
+
+Enforcement is in `NodeActor.sendToEligibleNeighbour` and `NodeActor.receive` for ExternalInput.
 
 ### 2.3 Node PDFs
 
-Each node has a **probability mass function** (PMF) over message types.  The default PMF from `sim.traffic.defaultPdf` is applied to all nodes; per-node overrides are read from `sim.traffic.perNodePdf`.  PDFs are validated to sum to 1.0 ± 0.01 and normalised if they do not.
+Each node has a **probability mass function** (PMF) over message types.  The default PMF from `sim.traffic.defaultPdf` is applied to all nodes; per-node overrides (`sim.traffic.perNodePdf`) are applied on top.  PDFs are validated to sum to 1.0 ± 0.01 and normalised if they do not.
 
 Sampling uses the inverse-CDF method in `NodeActor.sampleFromPdf()`.
+
+### 2.4 Ring Overlay
+
+Both algorithms require a ring structure.  `SimGraph.ringNextOf` builds a logical ring by sorting all node IDs numerically and mapping each to its successor (wrapping around).  This overlay is independent of the actual edge set — ring algorithm messages travel over the logical ring via the `CONTROL` channel, which is always permitted.
 
 ## 3. Actor Architecture
 
@@ -94,46 +104,80 @@ Nodes listed in `sim.initiators.timers` receive `timerEnabled = true` in their I
 
 ### 4.2 Input Nodes
 
-Nodes listed in `sim.initiators.inputs` are designated as `isInputNode = true`.  The `SimCoordinator` routes `ExternalInput` messages to one of these nodes.  The CLI supports `--inject <kind>` to inject a message at startup.  In interactive mode, the user can send additional `ExternalInput` messages programmatically.
+Nodes listed in `sim.initiators.inputs` are designated as `isInputNode = true`.  The `SimCoordinator` routes `ExternalInput` messages to one of these nodes.  The CLI supports `--inject <kind>` to inject a message at startup.
 
 ## 5. Distributed Algorithms
 
-Both algorithms implement the `DistributedAlgorithm` trait and are instantiated per node by `SimMain`'s `algoFactory` lambda.
+Both algorithms implement the `DistributedAlgorithm` trait and are instantiated per node by `SimMain`'s `algoFactory` lambda.  Both are implemented exactly as described in:
+
+> Fokkink, W. *Distributed Algorithms: An Intuitive Approach*, MIT Press.
 
 ### 5.1 Itai-Rodeh Leader Election
 
-**Paper**: Itai & Rodeh, "Symmetry Breaking in Distributed Networks", SIAM J. Comput. 1990.
-
 **Setting**: N anonymous processes on a directed ring.  No process has a pre-assigned unique ID.
 
-**Protocol** (single instance per node):
+**State per process**:
+- `status ∈ {Active, Passive, Elected}` — initially Active
+- `n` — current round number, initially 1
+- `idp` — candidate ID for round n (random)
 
-1. `onStart`: Pick random `myId ∈ [1, ringSize × 100]`.  Send `ELECT(id=myId, hops=1)` to right ring successor.
-2. On `ELECT(id, hops)`:
-   - `id > myId` → forward `ELECT(id, hops+1)`.
-   - `id < myId` → discard.
-   - `id == myId && hops < ringSize` → collision; pick new `myId`, restart.
-   - `id == myId && hops == ringSize` → circuit complete; declare self leader, send `LEADER(leaderId=myId)`.
-3. On `LEADER(leaderId)`:
-   - `leaderId ≠ myId` → forward `LEADER` (propagate announcement).
-   - `leaderId == myId` → announcement returned to originator; log completion.
+**Message**: `ELECT(round, id, hops, collision)`
 
-**Correctness**: The highest active ID circulates the ring undefeated with probability → 1.  Collisions cause restarts with fresh random IDs; since |ID space| >> ringSize, restarts are rare.
+**Protocol**:
+
+```
+StartRound (active p):
+  idp := random(1 .. ringSize × 100)
+  send ELECT(n, idp, 1, false) to successor
+
+On receive ELECT(n2, i, h, collision):
+  n2 < n  → discard (stale round)
+  n2 > n  → adopt round, go Passive, relay ELECT(n2, i, h+1, collision)
+  n2 == n:
+    Passive  → relay ELECT(n, i, h+1, collision)
+    Active, i > idp  → go Passive, relay
+    Active, i < idp  → discard (our id dominates)
+    Active, i == idp (own message returning):
+      h < ringSize  → relay with collision=true
+      h == ringSize, collision     → n++, go Active, StartRound
+      h == ringSize, !collision    → go Elected, send LEADER(idp)
+```
+
+**Correctness**: A message can only complete a full ring lap if no other active node eliminated it (higher id wins).  The collision flag detects when two active nodes sent the same id in the same round.  Incrementing the round number prevents stale messages from interfering with the new round.
 
 **Run**: `sbt "runMain edu.uic.cs553.cli.SimMain --algo election --duration 20"`
 
 ### 5.2 Itai-Rodeh Ring Size Estimation
 
-**Setting**: N anonymous processes on a ring, each needing to estimate N without prior knowledge.
+**Setting**: N anonymous processes on a ring, each independently estimating N.
 
-**Protocol** (single instance per node, up to `maxRounds` rounds):
+**State per process**:
+- `est` — current size estimate, initially 2
+- `id` — probe ID for the current round (random)
 
-1. `onStart`: Pick random `probeId ∈ [1, 100000]`.  Send `PROBE(probeId, hops=1)` to right successor.
-2. On `PROBE(probeId, hops)`:
-   - `probeId == myProbeId` → probe returned; estimate = `hops`.  Start next round if `roundsCompleted < maxRounds`.
-   - `probeId ≠ myProbeId` → relay `PROBE(probeId, hops+1)`.
+**Message**: `PROBE(estm, id, h)`
 
-**Accuracy**: With `probeIdRange = 100,000 >> ringSize`, collision probability per round is < `ringSize / 100000`.  Running 3 rounds gives a running average that is almost always exactly the ring size.
+**Protocol**:
+
+```
+Initially:
+  id := random(1 .. 100000)
+  send PROBE(est, id, 1) to successor
+
+On receive PROBE(estm, idm, h):
+  estm < est  → ignore (stale)
+  estm > est  →
+    est := estm
+    h < est   → relay PROBE(est, idm, h+1)
+    h >= est  → est := est+1; new round
+  estm == est →
+    h < est   → relay PROBE(est, idm, h+1)
+    h >= est  →
+      idm != id → est := est+1; new round
+      idm == id → output est  (ring size found)
+```
+
+**Termination**: The algorithm terminates when a node's own probe completes exactly `est` hops with no id collision — meaning `est` equals the true ring size.  There is no fixed round limit; convergence is guaranteed probabilistically (the ID space is large relative to ring size).
 
 **Run**: `sbt "runMain edu.uic.cs553.cli.SimMain --algo ring-size --duration 30"`
 
@@ -152,7 +196,20 @@ SimMessage (sealed trait)
 └── Tick           — internal timer trigger (private[sim])
 ```
 
-`AlgoMessage.data` uses `Map[String, String]` rather than `Any`.  This avoids stringly-typed dispatch while keeping the message open for extension — new algorithm message subtypes only require adding new `kind` strings and documented `data` keys, not changes to the sealed hierarchy.
+`AlgoMessage.data` uses `Map[String, String]`.  This keeps the message open for extension — new algorithm message subtypes only require new `kind` strings and documented `data` keys, without changes to the sealed hierarchy.
+
+### Election message fields
+
+| Message | Fields |
+|---|---|
+| `ELECT` | `round`, `id`, `hops`, `collision` |
+| `LEADER` | `leaderId` |
+
+### Ring-size message fields
+
+| Message | Fields |
+|---|---|
+| `PROBE` | `estm`, `id`, `h` |
 
 ## 7. Experiment Configurations
 
@@ -161,6 +218,8 @@ SimMessage (sealed trait)
 | experiment1 | sparse (8 nodes, ring only) | election | Pure-ring correctness; low background noise |
 | experiment2 | sample (12 nodes, ring+cross) | ring-size | Algorithm isolation from cross-edge traffic |
 | experiment3 | dense (8 nodes, high connectivity) | none | Max-throughput traffic; edge-label enforcement effect |
+| experiment4 | large-10k (10,000 nodes) | election | Algorithm scalability under large ring |
+| experiment5 | sparse (8 nodes) | none | Per-edge labels + per-node PDFs; channel heterogeneity |
 
 ## 8. Metrics
 
@@ -170,8 +229,17 @@ The following metrics are captured and logged by MetricsCollector at run end:
 - **In-flight approximation per channel** — cumulative outbound count per (sender, receiver) pair, approximating channel load.
 - **Wall-clock duration** — elapsed time from MetricsCollector creation to summary.
 
-Note on Cinnamon: Lightbend Cinnamon (Telemetry) requires a commercial Lightbend subscription and is therefore not included. The manual metrics above cover all required data points from the course spec (message counts by type, in-flight messages per channel, time to completion).
+## 9. Logging
 
-## 9. Reproducibility
+Logging uses SLF4J → Logback via the `akka-slf4j` bridge.  Key levels:
 
-All random decisions (PDF sampling, probe IDs, random IDs) accept an explicit `seed` parameter.  The seed is configurable via `--seed <long>` on the CLI.  The default seed is 42.  Re-running with the same seed, graph, and algorithm produces identical message sequences.
+| Logger | Default level | Shows |
+|---|---|---|
+| `edu.uic.cs553` | INFO | Algorithm events, node init/stop, metrics summary |
+| `akka` | WARN | Akka system warnings only |
+
+To see per-message traffic (send/receive on every edge), change `edu.uic.cs553` to `DEBUG` in `src/main/resources/logback.xml`.
+
+## 10. Reproducibility
+
+All random decisions (PDF sampling, probe IDs, election IDs) accept an explicit `seed` parameter.  The seed is configurable via `--seed <long>` on the CLI (default: 42).  Re-running with the same seed, graph, and algorithm produces identical message sequences.

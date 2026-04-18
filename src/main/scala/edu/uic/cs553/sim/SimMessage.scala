@@ -32,15 +32,16 @@ object SimMessage:
    * rightNeighborId / ringSize: used exclusively by ring algorithms.
    */
   final case class Init(
-    nodeId:          Int,
-    neighbors:       Map[Int, ActorRef],
-    allowedOnEdge:   Map[Int, Set[String]],  // neighborId -> allowed msg types
-    pdf:             Map[String, Double],     // msgType -> emission probability
-    timerEnabled:    Boolean,
-    tickEveryMs:     Long,
-    isInputNode:     Boolean,
-    rightNeighborId: Option[Int],
-    ringSize:        Int
+    nodeId:           Int,
+    neighbors:        Map[Int, ActorRef],
+    allowedOnEdge:    Map[Int, Set[String]],  // neighborId -> allowed msg types
+    pdf:              Map[String, Double],     // msgType -> emission probability
+    timerEnabled:     Boolean,
+    tickEveryMs:      Long,
+    isInputNode:      Boolean,
+    rightNeighborId:  Option[Int],
+    ringSize:         Int,
+    ringSuccessorRef: Option[ActorRef] = None // ActorRef for ring successor, independent of graph edges
   ) extends SimMessage
 
   case object Start extends SimMessage

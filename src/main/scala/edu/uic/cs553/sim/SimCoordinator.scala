@@ -52,8 +52,9 @@ class SimCoordinator(graph: SimGraph, algoFactory: Int => Option[DistributedAlgo
       timerEnabled    = node.timerEnabled,
       tickEveryMs     = node.tickEveryMs,
       isInputNode     = node.isInputNode,
-      rightNeighborId = graph.ringNextOf.get(node.id),
-      ringSize        = graph.nodes.size
+      rightNeighborId  = graph.ringNextOf.get(node.id),
+      ringSize         = graph.nodes.size,
+      ringSuccessorRef = graph.ringNextOf.get(node.id).flatMap(nodeRefs.get)
     )
   }
 

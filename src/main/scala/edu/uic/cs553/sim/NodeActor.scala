@@ -36,12 +36,13 @@ class NodeActor(nodeId: Int, algorithm: Option[DistributedAlgorithm])
   import SimMessage.*
 
   // Actor-local mutable state — safe: Akka single-threaded execution guarantee
-  private var neighbors:     Map[Int, ActorRef]       = Map.empty
-  private var allowedOnEdge: Map[Int, Set[String]]    = Map.empty  // neighborId -> allowed types
-  private var pdf:           Map[String, Double]      = Map.empty
-  private var rightNeighbor: Option[Int]              = None
-  private var ringSize:      Int                      = 1
-  private var rng:           scala.util.Random        = new scala.util.Random()
+  private var neighbors:        Map[Int, ActorRef]       = Map.empty
+  private var allowedOnEdge:    Map[Int, Set[String]]    = Map.empty  // neighborId -> allowed types
+  private var pdf:              Map[String, Double]      = Map.empty
+  private var rightNeighbor:    Option[Int]              = None
+  private var ringSuccessorRef: Option[ActorRef]         = None  // ring overlay, independent of graph edges
+  private var ringSize:         Int                      = 1
+  private var rng:              scala.util.Random        = new scala.util.Random()
 
   // Metrics (accumulated until GetMetrics is received)
   private var msgCountsByType: Map[String, Long] = Map.empty
@@ -49,12 +50,13 @@ class NodeActor(nodeId: Int, algorithm: Option[DistributedAlgorithm])
 
   override def receive: Receive =
 
-    case Init(nid, nbrs, allowed, pdfMap, timerOn, tickMs, _, rightNbr, rSz) =>
-      neighbors     = nbrs
-      allowedOnEdge = allowed
-      pdf           = pdfMap
-      rightNeighbor = rightNbr
-      ringSize      = rSz
+    case Init(nid, nbrs, allowed, pdfMap, timerOn, tickMs, _, rightNbr, rSz, ringRef) =>
+      neighbors        = nbrs
+      allowedOnEdge    = allowed
+      pdf              = pdfMap
+      rightNeighbor    = rightNbr
+      ringSuccessorRef = ringRef
+      ringSize         = rSz
       rng           = new scala.util.Random(rSz.toLong * nid)  // deterministic per-node seed
       if timerOn then
         timers.startTimerAtFixedRate("traffic-tick", Tick, tickMs.millis)
@@ -133,9 +135,11 @@ class NodeActor(nodeId: Int, algorithm: Option[DistributedAlgorithm])
       trackInFlight(toId)
 
   private def sendToNeighbour(toId: Int, msg: SimMessage): Unit =
-    neighbors.get(toId) match
-      case Some(ref) => ref ! msg
-      case None      => log.warning(s"[Node-$nodeId] sendToNeighbour: unknown id $toId")
+    neighbors.get(toId)
+      .orElse(if rightNeighbor.contains(toId) then ringSuccessorRef else None)
+      match
+        case Some(ref) => ref ! msg
+        case None      => log.warning(s"[Node-$nodeId] sendToNeighbour: unknown id $toId")
 
   /** Returns the set of neighbour ids whose edge allows the given message type. */
   private def neighboursAllowingType(kind: String): Set[Int] =
