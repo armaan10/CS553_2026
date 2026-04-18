@@ -11,7 +11,8 @@ End-to-end distributed algorithms simulator built with **Scala 3.3.3** and **Akk
 | Scala | 3.3.3 (downloaded automatically by SBT) |
 
 ---
-
+### Demo Video:
+https://drive.google.com/file/d/1sx43qvF07a8VHYucqh0OthhP8ME8-Z9h/view?usp=sharing
 ## How to Run
 
 ### Step 1 — Clone and build
