@@ -111,7 +111,7 @@ Nodes listed in `sim.initiators.inputs` are designated as `isInputNode = true`. 
 
 Both algorithms implement the `DistributedAlgorithm` trait and are instantiated per node by `SimMain`'s `algoFactory` lambda.  Both are implemented exactly as described in:
 
-> Fokkink, W. *Distributed Algorithms: An Intuitive Approach*, MIT Press.
+>Grechanik, M. *Distributed Algorithms and Systems*
 
 ### 5.1 Itai-Rodeh Leader Election
 

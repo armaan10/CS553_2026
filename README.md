@@ -202,8 +202,8 @@ See `docs/design.md` for full design rationale and algorithm descriptions.
 ---
 
 ## References
-
-- Fokkink, W. *Distributed Algorithms: An Intuitive Approach*, MIT Press — source of both algorithm pseudocodes.
+- Grechanik, M. *Distributed Algorithms and Systems* 
+- Fokkink, W. *Distributed Algorithms: An Intuitive Approach*, MIT Press 
 - [NetGameSim repository](https://github.com/0x1DOCD00D/NetGameSim)
 - [NetGameSim walkthrough video](https://www.youtube.com/watch?v=6fdazJBkdjA&t=2658s)
 - [Akka Classic documentation](https://akka.io/docs/)
