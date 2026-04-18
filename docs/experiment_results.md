@@ -94,14 +94,15 @@ sbt "runMain edu.uic.cs553.cli.SimMain \
 **Command:**
 ```bash
 sbt "runMain edu.uic.cs553.cli.SimMain \
-     --ngs outputs/NetGraph_18-04-26-04-19-27.ngs \
+     --ngs outputs/NetGraph_18-04-26-05-03-31.ngs \
      --config experiments/experiment6 \
      --algo election --duration 25"
 ```
 
 **Graph:** 11 nodes, 10 edges (NetGameSim-generated, sparse directed)  
-**Topology:** `0→1, 0→2, 1→10, 2→6, 3→9, 6→7, 7→5, 8→4, 9→8, 10→3`  
-**Config:** `tickIntervalMs=350`, timers=[1,3], per-edge labels applied to all 10 edges
+**Topology:** `0→1, 0→2, 1→9, 2→4, 3→8, 5→3, 6→5, 7→10, 9→7, 10→6`  
+**Config:** `tickIntervalMs=350`, timers=[0,1,5,9], per-edge labels applied to all 10 edges  
+**Note:** Nodes 4 and 8 have no outgoing edges — they participate in the ring as relay nodes only.
 
 **Per-edge label configuration:**
 
@@ -109,14 +110,14 @@ sbt "runMain edu.uic.cs553.cli.SimMain \
 |---|---|---|
 | 0→1 | PING | Heartbeat only |
 | 0→2 | GOSSIP, WORK | Task channel |
-| 1→10 | PING | Heartbeat only |
-| 2→6 | PING, GOSSIP | Gossip link |
-| 3→9 | GOSSIP, WORK | Task channel |
-| 6→7 | WORK | Dedicated task |
-| 7→5 | PING, GOSSIP | Gossip link |
-| 8→4 | GOSSIP | Gossip only |
-| 9→8 | PING, WORK | Mixed |
-| 10→3 | PING, GOSSIP, WORK | Full traffic |
+| 1→9 | PING | Heartbeat only |
+| 2→4 | PING, GOSSIP | Gossip link |
+| 3→8 | GOSSIP, WORK | Task channel |
+| 5→3 | GOSSIP | Gossip only |
+| 6→5 | WORK | Dedicated task |
+| 7→10 | PING, GOSSIP, WORK | Full traffic |
+| 9→7 | PING, WORK | Mixed |
+| 10→6 | PING, GOSSIP | Gossip link |
 
 **Results:**
 
@@ -125,13 +126,13 @@ sbt "runMain edu.uic.cs553.cli.SimMain \
 | Leader elected | Node-0 (id=1031) |
 | Hops to complete ring | 11 (= ring size, round 1) |
 | Election rounds needed | 1 |
-| Total messages | 142 |
-| PING | 71 (50%) |
-| GOSSIP | 42 (30%) |
-| WORK | 29 (20%) |
+| Total messages | 284 |
+| PING | 135 (47%) |
+| GOSSIP | 91 (32%) |
+| WORK | 58 (20%) |
 | Duration | 25s |
 
-**Observation:** The ring overlay routes election messages across all 11 nodes including nodes 4 and 5 which have zero physical outgoing edges — confirming that `ringSuccessorRef` correctly decouples ring algorithm routing from the physical graph topology. Per-edge labels shape the traffic mix: node-1 emits PING-only (matching the `1→10` heartbeat channel) and node-3 emits GOSSIP/WORK equally (matching the `3→9` task channel), so no messages are dropped by the edge-label enforcer.
+**Observation:** The ring overlay routes election messages across all 11 nodes including nodes 4 and 8 which have zero physical outgoing edges — confirming that `ringSuccessorRef` correctly decouples ring algorithm routing from the physical graph topology. Per-edge labels shape the traffic mix: node-1 emits PING-only (matching the `1→9` heartbeat channel), node-5 emits GOSSIP-only (matching the `5→3` gossip-only channel), and node-9 emits PING+WORK equally (matching the `9→7` mixed channel) — so no messages are dropped by the edge-label enforcer. The WORK fraction (20%) comes entirely from nodes 0 and 9 whose outgoing task channels allow it.
 
 ---
 
@@ -140,6 +141,6 @@ sbt "runMain edu.uic.cs553.cli.SimMain \
 | Experiment | Graph | Nodes | Edges | Algorithm | Total Msgs | Duration |
 |---|---|---|---|---|---|---|
 | 1 | sparse ring | 8 | 8 | election | 66 | 25s |
-| 2 | sample ring+cross | 12 | 18 | ring-size | — | 30s |
+| 2 | sample ring+cross | 12 | 18 | ring-size | 244 | 15s |
 | 3 | dense | 8 | 24 | none (traffic) | 1,194 | 20s |
-| 6 | NetGameSim NGs | 11 | 10 | election | 142 | 25s |
+| 6 | NetGameSim NGs | 11 | 10 | election | 284 | 25s |

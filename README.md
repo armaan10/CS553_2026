@@ -65,13 +65,12 @@ sbt "runMain edu.uic.cs553.cli.SimMain --algo none --duration 20"
 
 ```bash
 
-# Experiment 6 — NetGameSim graph with per-edge labels + per-node PDFs, election
-# Sample graph in outputs/
+# Experiment 6 — NetGameSim graph, per-edge labels + election
 sbt "runMain edu.uic.cs553.cli.SimMain \
      --ngs outputs/NetGraph_18-04-26-05-03-31.ngs \
      --config experiments/experiment6 \
      --algo election --duration 25"
-     
+
 # Experiment 1 — sparse ring (8 nodes), leader election
 sbt "runMain edu.uic.cs553.cli.SimMain \
      --config experiments/experiment1 \
