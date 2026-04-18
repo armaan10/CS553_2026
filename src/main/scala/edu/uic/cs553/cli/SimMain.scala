@@ -44,6 +44,7 @@ object SimMain:
     val durationSec = opts.get("duration").map(_.toLong).getOrElse(30L)
     val seed        = opts.get("seed").map(_.toLong).getOrElse(42L)
     val injectKind  = opts.get("inject")
+    val roundsOpt   = opts.get("rounds").map(_.toInt)
 
     log.info(s"=== CS553 Distributed Sim starting: algo=$algo duration=${durationSec}s seed=$seed ===")
 
@@ -68,16 +69,23 @@ object SimMain:
         log.error(s"Failed to load graph: $err")
         sys.exit(1)
 
+    // Max rounds for ring-size: CLI flag > config > default (3)
+    val maxRounds = roundsOpt.getOrElse(
+      if cfg.hasPath("sim.algorithms.ringSizeMaxRounds")
+      then cfg.getInt("sim.algorithms.ringSizeMaxRounds")
+      else 3
+    )
+
     // Build algorithm factory (one instance per node; seed differs per node for variety)
     val algoFactory: Int => Option[DistributedAlgorithm] = nodeId =>
       algo match
         case "election"  => Some(ItaiRodehElection(graph.nodes.size, seed + nodeId))
-        case "ring-size" => Some(ItaiRodehRingSize(seed + nodeId))
+        case "ring-size" => Some(ItaiRodehRingSize(seed + nodeId, maxRounds))
         case "both"      =>
           // Run election first; ring-size runs independently on the same ring
           // We pick one per node: even nodes do election, odd do ring-size
           if nodeId % 2 == 0 then Some(ItaiRodehElection(graph.nodes.size, seed + nodeId))
-          else                     Some(ItaiRodehRingSize(seed + nodeId))
+          else                     Some(ItaiRodehRingSize(seed + nodeId, maxRounds))
         case _           => None
 
     // Create actor system and start coordinator

@@ -88,9 +88,12 @@ class ItaiRodehRingSize(seed: Long, maxRounds: Int = 3) extends DistributedAlgor
         Map("probeId" -> probeId.toString, "hops" -> (hops + 1).toString)))
 
   private def startProbe(ctx: NodeContext): Unit =
-    myProbeId   = rng.nextInt(ItaiRodehRingSize.ProbeIdRange) + 1
+    // Scale range with ring size so birthday-paradox collision probability stays low
+    // regardless of how many nodes probe simultaneously.
+    val adaptiveRange = math.max(ItaiRodehRingSize.ProbeIdRange, ctx.ringSize * 10000)
+    myProbeId   = rng.nextInt(adaptiveRange) + 1
     probeActive = true
-    ctx.log.debug(s"[${name}][Node-${ctx.nodeId}] sending PROBE probeId=$myProbeId round=${roundsCompleted+1}")
+    ctx.log.info(s"[${name}][Node-${ctx.nodeId}] sending PROBE probeId=$myProbeId round=${roundsCompleted+1}")
     ctx.send(rightNeighborId, SimMessage.AlgoMessage(name, "PROBE",
       Map("probeId" -> myProbeId.toString, "hops" -> "1")))
 

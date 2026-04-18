@@ -88,7 +88,7 @@ class NodeActor(nodeId: Int, algorithm: Option[DistributedAlgorithm])
     case env @ Envelope(from, kind, _) =>
       countMsg(kind)
       algorithm.foreach(_.onEnvelope(makeContext(), env))
-      log.debug(s"[Node-$nodeId] received Envelope from=$from kind=$kind")
+      log.debug(s"[Node-$nodeId] <<< $kind ← node-$from")
 
     case msg: AlgoMessage if algorithm.exists(_.name == msg.algoName) =>
       algorithm.foreach(_.onAlgoMessage(makeContext(), msg))
@@ -128,6 +128,7 @@ class NodeActor(nodeId: Int, algorithm: Option[DistributedAlgorithm])
     val eligible = neighboursAllowingType(kind).toList
     if eligible.nonEmpty then
       val toId = eligible(rng.nextInt(eligible.size))
+      log.debug(s"[Node-$nodeId] >>> $kind → node-$toId  payload='$payload'")
       neighbours(toId) ! Envelope(nodeId, kind, payload)
       trackInFlight(toId)
 

@@ -19,7 +19,7 @@ import edu.uic.cs553.sim.SimMessage
  *    - Sends ELECT(id=myId, hops=1) to its right-ring successor.
  *
  *  On receiving ELECT(id, hops):
- *    - id > myId  → forward ELECT(id, hops+1) rightward (higher ID keeps circulating).
+ *    - id > myId  → forward ELECTcan(id, hops+1) rightward (higher ID keeps circulating).
  *    - id < myId  → discard (this ID cannot win; the current node's ID dominates it).
  *    - id == myId:
  *        hops < ringSize → ID collision: two nodes picked the same random ID.
@@ -75,10 +75,10 @@ class ItaiRodehElection(configRingSize: Int, seed: Long) extends DistributedAlgo
 
   private def handleElect(ctx: NodeContext, inId: Int, hops: Int): Unit =
     if inId > myId then
-      ctx.log.debug(s"[${name}][Node-${ctx.nodeId}] forwarding ELECT($inId, ${hops+1})")
+      ctx.log.info(s"[${name}][Node-${ctx.nodeId}] relaying ELECT(id=$inId, hops=${hops+1}) — stronger than myId=$myId")
       sendElect(ctx, inId, hops + 1)
     else if inId < myId then
-      ctx.log.debug(s"[${name}][Node-${ctx.nodeId}] discarding ELECT($inId) — dominated by myId=$myId")
+      ctx.log.info(s"[${name}][Node-${ctx.nodeId}] eliminated ELECT(id=$inId) — dominated by myId=$myId")
     else
       // inId == myId
       if hops < effectiveRingSize then
