@@ -155,7 +155,7 @@ akka {
 
 **Step 2** — `src/main/resources/logback.xml`:
 ```xml
-<logger name="edu.uic.cs553" level="DEBUG" additivity="false">
+<logger name="edu.uic.cs553" level="DEBUG" additivity="false" />
 ```
 
 Both must be set — Akka filters messages before they reach logback, so setting only logback has no effect.
