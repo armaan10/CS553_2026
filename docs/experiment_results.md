@@ -52,9 +52,12 @@ sbt "runMain edu.uic.cs553.cli.SimMain \
 | Algorithm | Itai-Rodeh probe-based estimation |
 | Max rounds | 3 |
 | Convergence | All nodes converge to est=12 |
-| Duration | 30s |
+| Total messages | 244 |
+| PING | 128 (52%) |
+| GOSSIP | 116 (48%) |
+| Duration | 15s |
 
-**Observation:** Cross-edges carry concurrent PING/GOSSIP/WORK traffic but do not interfere with PROBE messages — algorithm messages are CONTROL-typed and bypass edge-label enforcement. Consistent `est=12` estimates across all node logs confirm that the logical ring overlay is correctly independent of the physical cross-edge topology.
+**Observation:** Cross-edges carry concurrent PING/GOSSIP traffic while PROBE messages travel the ring as CONTROL-typed `AlgoMessage`s that bypass edge-label enforcement. All 12 nodes converge to `final ring-size estimate: 12.0 (3 rounds)`, confirming the logical ring overlay is correctly independent of the physical cross-edge topology. The PING/GOSSIP split reflects the experiment2 PDF (40%/40%) with no WORK traffic (edges only allow PING+GOSSIP by default).
 
 ---
 
