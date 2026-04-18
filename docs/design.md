@@ -229,6 +229,19 @@ The following metrics are captured and logged by MetricsCollector at run end:
 - **In-flight approximation per channel** — cumulative outbound count per (sender, receiver) pair, approximating channel load.
 - **Wall-clock duration** — elapsed time from MetricsCollector creation to summary.
 
+### 8.1 Why Lightbend Telemetry (Cinnamon) Is Disabled
+
+The `build.sbt` includes the Lightbend Cinnamon telemetry agent, which would normally provide actor-level metrics via the `cinnamon` config block. At runtime the following warning appears:
+
+```
+[WARN] [Cinnamon: AkkaInstrumenterData] Unsupported Akka version 2.8.5 for Scala 3.3.4.
+Not instrumenting the Akka classes! This Cinnamon version only supports Akka 24.10 modules.
+```
+
+**Root cause:** Cinnamon 2.21.4 targets Akka 24.10 (the commercial Lightbend fork), but this project uses Akka 2.8.5 (the open-source Apache-licensed classic release). The two are API-incompatible — Cinnamon's bytecode instrumentation cannot attach to the older actor classes.
+
+**Impact:** The `cinnamon` config block in `application.conf` is inert. All metrics are instead collected by the custom `MetricsCollector` actor, which aggregates `MetricsReport` messages from every `NodeActor` at shutdown.
+
 ## 9. Logging
 
 Logging uses SLF4J → Logback via the `akka-slf4j` bridge.  Key levels:

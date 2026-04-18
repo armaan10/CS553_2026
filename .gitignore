@@ -25,6 +25,10 @@ sbt-*.tgz
 .DS_Store
 Thumbs.db
 
+# Generated graph outputs — keep directory, ignore files
+outputs/*
+!outputs/.gitkeep
+
 # Claude Code
 CLAUDE.md
 .claude/
