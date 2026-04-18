@@ -132,7 +132,7 @@ sbt "runMain edu.uic.cs553.cli.SimMain \
 --config  <name>     Typesafe config name (default: application)
 --graph   <path>     Simple JSON graph file path
 --ngs     <path>     NetGameSim two-line JSON graph file path
---algo    <name>     election | ring-size | both | none  (default: none)
+--algo    <name>     election | ring-size | none  (default: none)
 --duration <secs>    Run duration in seconds (default: 30)
 --seed    <long>     Random seed for reproducibility (default: 42)
 --inject  <kind>     Inject one ExternalInput message of this type at startup
