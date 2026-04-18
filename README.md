@@ -51,10 +51,6 @@ sbt "runMain edu.uic.cs553.cli.SimMain --algo election --duration 20"
 sbt "runMain edu.uic.cs553.cli.SimMain --algo ring-size --duration 20"
 ```
 
-**Both algorithms (election on even nodes, ring-size on odd):**
-```bash
-sbt "runMain edu.uic.cs553.cli.SimMain --algo both --duration 20"
-```
 
 **Background traffic only (no algorithm):**
 ```bash
