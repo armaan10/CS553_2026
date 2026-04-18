@@ -1,213 +1,194 @@
-# CS553_2026 - Distributed Algorithms Framework
+# CS553_2026 — Distributed Algorithms Simulator
 
-An open-source repository for a grad-level course at UIC on distributed systems. This project provides an Akka-based framework for students to develop and experiment with distributed algorithms.
-
-## Overview
-
-This framework allows students to:
-- Implement and experiment with classical distributed algorithms
-- Study distributed system concepts through hands-on experimentation
-- Develop custom distributed algorithms using Akka actors
-- Observe algorithm behavior in a controlled environment
-
-## Features
-
-- **Akka Actor-Based Framework**: Built on Akka Typed actors for robust distributed computation
-- **Multiple Algorithm Implementations**:
-  - **Echo Algorithm**: Broadcast and convergcast operations
-  - **Bully Leader Election**: Leader election with priority-based selection
-  - **Token Ring**: Mutual exclusion using token passing
-- **Experiment Runner**: Utilities for running and observing distributed algorithms
-- **Extensible Architecture**: Easy to add new algorithms
+End-to-end distributed algorithms simulator built with **Scala 3.3.3** and **Akka Classic actors**.  Randomly generated graphs from NetGameSim become running Akka actor networks where each node is an actor and each edge is a typed message channel.  Two distributed algorithms from Fokkink's textbook run on top: **Itai-Rodeh leader election** and **Itai-Rodeh ring size estimation**.
 
 ## Prerequisites
 
-- Java 11 or higher
-- Scala 2.13.x
-- SBT 1.9.x
+| Requirement | Version |
+|---|---|
+| Java | 11 or higher |
+| SBT  | 1.9.x |
+| Scala | 3.3.3 (downloaded automatically by SBT) |
 
-## Getting Started
+---
 
-### Building the Project
+## How to Run
+
+### Step 1 — Clone and build
 
 ```bash
+git clone <repo-url>
+cd CS553_2026
 sbt compile
 ```
 
-### Running Examples
-
-The project includes several example applications demonstrating different distributed algorithms:
-
-#### Echo Algorithm
-
-```bash
-sbt "runMain com.uic.cs553.distributed.examples.EchoAlgorithmExample"
-```
-
-The Echo algorithm demonstrates:
-- Wave propagation from an initiator node
-- Echo collection from all nodes
-- Termination detection
-
-#### Bully Leader Election
-
-```bash
-sbt "runMain com.uic.cs553.distributed.examples.BullyLeaderElectionExample"
-```
-
-The Bully algorithm demonstrates:
-- Leader election based on node IDs
-- Election message propagation
-- Leader announcement
-
-#### Token Ring
-
-```bash
-sbt "runMain com.uic.cs553.distributed.examples.TokenRingExample"
-```
-
-The Token Ring algorithm demonstrates:
-- Mutual exclusion through token passing
-- Fair access to critical sections
-- Ring topology
-
-## Project Structure
-
-```
-src/main/scala/com/uic/cs553/distributed/
-├── framework/           # Core framework classes
-│   ├── DistributedNode.scala          # Base classes for nodes
-│   └── ExperimentRunner.scala         # Experiment execution utilities
-├── algorithms/          # Distributed algorithm implementations
-│   ├── EchoAlgorithm.scala
-│   ├── BullyLeaderElection.scala
-│   └── TokenRingAlgorithm.scala
-└── examples/           # Example applications
-    ├── EchoAlgorithmExample.scala
-    ├── BullyLeaderElectionExample.scala
-    └── TokenRingExample.scala
-```
-
-## Implementing Your Own Algorithm
-
-To create a custom distributed algorithm:
-
-1. **Extend the base classes**:
-
-```scala
-import com.uic.cs553.distributed.framework._
-
-class MyAlgorithmNode(nodeId: String) extends BaseDistributedNode(nodeId) {
-  override protected def onMessage(
-    ctx: ActorContext[DistributedMessage],
-    msg: DistributedMessage
-  ): Behavior[DistributedMessage] = {
-    // Implement your algorithm logic here
-    msg match {
-      case CommonMessages.Start() =>
-        // Initialize your algorithm
-        Behaviors.same
-      case _ =>
-        Behaviors.same
-    }
-  }
-}
-```
-
-2. **Create an example application**:
-
-```scala
-import com.uic.cs553.distributed.framework.ExperimentRunner
-
-object MyAlgorithmExample extends App {
-  ExperimentRunner.runExperiment(
-    algorithmName = "My Algorithm",
-    nodeCount = 5,
-    nodeFactory = (id: String) => new MyAlgorithmNode(id),
-    durationSeconds = 30
-  )
-}
-```
-
-3. **Run your algorithm**:
-
-```bash
-sbt "runMain com.uic.cs553.distributed.examples.MyAlgorithmExample"
-```
-
-## Key Concepts
-
-### DistributedNode
-
-The base class for all nodes in a distributed algorithm. Provides:
-- Automatic peer initialization
-- Message handling infrastructure
-- Broadcasting capabilities
-
-### ExperimentRunner
-
-A utility for running distributed algorithm experiments with:
-- Automatic node creation and initialization
-- Coordinated start/stop of algorithms
-- Configurable execution duration
-
-### Message Types
-
-All messages extend `DistributedMessage`. Common messages include:
-- `Initialize`: Set up node connections
-- `Start`: Begin algorithm execution
-- `Stop`: Terminate the algorithm
-
-## Advanced Usage
-
-### Custom Network Topologies
-
-While the framework defaults to a fully-connected topology, you can create custom topologies by controlling peer initialization:
-
-```scala
-// Example: Ring topology
-val nodes = createNodes(nodeCount)
-nodes.zipWithIndex.foreach { case (node, i) =>
-  val nextNode = nodes((i + 1) % nodes.length)
-  node ! SetNext(nextNode)
-}
-```
-
-### State Monitoring
-
-Query node states during execution:
-
-```scala
-node ! CommonMessages.GetState(replyTo)
-```
-
-## Testing
-
-Run tests with:
+### Step 2 — Run the tests (verify everything works)
 
 ```bash
 sbt test
 ```
 
-## Contributing
+All 19 tests should pass.
 
-Students are encouraged to:
-1. Implement additional distributed algorithms
-2. Enhance existing algorithms with new features
-3. Add visualization or monitoring capabilities
-4. Improve documentation
+### Step 3 — Run an algorithm
 
-## License
+The bundled 12-node `sample-graph.json` is used automatically when no `--graph` flag is provided.
 
-See the LICENSE file for details.
+**Leader election:**
+```bash
+sbt "runMain edu.uic.cs553.cli.SimMain --algo election --duration 20"
+```
 
-## Course Information
+**Ring size estimation:**
+```bash
+sbt "runMain edu.uic.cs553.cli.SimMain --algo ring-size --duration 20"
+```
 
-This repository is part of CS553 - Distributed Systems at the University of Illinois Chicago (UIC).
+**Both algorithms (election on even nodes, ring-size on odd):**
+```bash
+sbt "runMain edu.uic.cs553.cli.SimMain --algo both --duration 20"
+```
 
-## Further Reading
+**Background traffic only (no algorithm):**
+```bash
+sbt "runMain edu.uic.cs553.cli.SimMain --algo none --duration 20"
+```
 
-- [Akka Documentation](https://akka.io/docs/)
-- "Distributed Algorithms" by Nancy Lynch
-- "Introduction to Reliable and Secure Distributed Programming" by Cachin, Guerraoui, and Rodrigues
+### Step 4 — Run a pre-built experiment
 
+```bash
+# Experiment 1 — pure ring (8 nodes), leader election
+sbt "runMain edu.uic.cs553.cli.SimMain \
+     --config experiments/experiment1 \
+     --graph src/main/resources/graphs/sparse-graph.json \
+     --algo election --duration 25"
+
+# Experiment 2 — 12-node sample graph, ring-size estimation
+sbt "runMain edu.uic.cs553.cli.SimMain \
+     --config experiments/experiment2 \
+     --algo ring-size --duration 30"
+
+# Experiment 3 — dense graph, traffic throughput only
+sbt "runMain edu.uic.cs553.cli.SimMain \
+     --config experiments/experiment3 \
+     --graph src/main/resources/graphs/dense-graph.json \
+     --algo none --duration 20"
+
+# Experiment 4 — 10,000-node graph, election at scale
+sbt "runMain edu.uic.cs553.cli.SimMain \
+     --config experiments/experiment4 \
+     --graph src/main/resources/graphs/large-10k-graph.json \
+     --algo election --duration 60"
+
+# Experiment 5 — per-edge labels + per-node PDFs demo
+sbt "runMain edu.uic.cs553.cli.SimMain \
+     --config experiments/experiment5 \
+     --graph src/main/resources/graphs/sparse-graph.json \
+     --algo none --duration 30"
+```
+
+---
+
+## Graph Generation with NetGameSim
+
+NetGameSim (git submodule in `netgamesim/`) generates the graph topology.
+
+**Step 1** — Configure NetGameSim output:
+
+Edit `netgamesim/GenericSimUtilities/src/main/resources/application.conf`:
+```hocon
+NGSimulator {
+  outputDirectory = "/absolute/path/to/CS553_2026/outputs/"
+  OutputGraphRepresentation {
+    contentType = "json"   # change from "ngs" to "json"
+  }
+}
+```
+
+**Step 2** — Generate a graph:
+```bash
+cd netgamesim
+sbt run
+cd ..
+```
+This creates `outputs/NetGraph_<timestamp>.ngs.json`.
+
+**Step 3** — Run the simulator with the generated graph:
+```bash
+sbt "runMain edu.uic.cs553.cli.SimMain \
+     --ngs outputs/NetGraph_<timestamp>.ngs.json \
+     --algo election --duration 30"
+```
+
+---
+
+## All CLI Options
+
+```
+--config  <name>     Typesafe config name (default: application)
+--graph   <path>     Simple JSON graph file path
+--ngs     <path>     NetGameSim two-line JSON graph file path
+--algo    <name>     election | ring-size | both | none  (default: none)
+--duration <secs>    Run duration in seconds (default: 30)
+--seed    <long>     Random seed for reproducibility (default: 42)
+--inject  <kind>     Inject one ExternalInput message of this type at startup
+```
+
+---
+
+## Increasing Log Verbosity
+
+By default only algorithm events (election rounds, ring-size convergence, leader declaration) are printed.  To also see every individual message sent and received on each channel, edit `src/main/resources/logback.xml`:
+
+```xml
+<!-- change INFO to DEBUG -->
+<logger name="edu.uic.cs553" level="DEBUG" additivity="false">
+```
+
+---
+
+## Project Structure
+
+```
+src/main/scala/edu/uic/cs553/
+├── graph/           SimGraph.scala, GraphLoader.scala
+├── sim/             SimMessage.scala, NodeActor.scala, SimCoordinator.scala, MetricsCollector.scala
+├── algorithms/      DistributedAlgorithm.scala, ItaiRodehElection.scala, ItaiRodehRingSize.scala
+└── cli/             SimMain.scala
+
+src/main/resources/
+├── application.conf
+├── logback.xml
+├── graphs/          sample-graph.json, sparse-graph.json, dense-graph.json, large-10k-graph.json
+└── experiments/     experiment1.conf – experiment5.conf
+
+src/test/scala/edu/uic/cs553/
+├── graph/           GraphLoaderSpec.scala
+├── sim/             NodeActorSpec.scala, SimIntegrationSpec.scala
+└── algorithms/      ItaiRodehElectionSpec.scala, ItaiRodehRingSizeSpec.scala
+
+docs/design.md       — architecture and algorithm documentation
+netgamesim/          — NetGameSim submodule (graph generation)
+outputs/             — generated graph artifacts go here
+```
+
+---
+
+## Architecture Summary
+
+- **GraphLoader** reads NetGameSim JSON output (or bundled sample graphs) and enriches the topology with per-edge allowed message types and per-node probability mass functions.
+- **SimGraph** sorts all node IDs to build a logical ring overlay (`ringNextOf`) used by both algorithms.
+- **NodeActor** (Akka Classic) enforces edge labels on outgoing traffic, generates background messages via PDF-sampled timers, accepts external injection, and hosts a pluggable `DistributedAlgorithm` instance.
+- **SimCoordinator** manages actor lifecycle and routes external inputs.
+- **MetricsCollector** aggregates message counts, in-flight estimates, and timing.
+
+See `docs/design.md` for full design rationale and algorithm descriptions.
+
+---
+
+## References
+
+- Fokkink, W. *Distributed Algorithms: An Intuitive Approach*, MIT Press — source of both algorithm pseudocodes.
+- [NetGameSim repository](https://github.com/0x1DOCD00D/NetGameSim)
+- [NetGameSim walkthrough video](https://www.youtube.com/watch?v=6fdazJBkdjA&t=2658s)
+- [Akka Classic documentation](https://akka.io/docs/)
